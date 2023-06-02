@@ -289,7 +289,7 @@ static int pkcs7()
 	hash_algorithm_t digest = HASH_UNKNOWN;
 	signature_params_t *scheme = NULL;
 	mem_cred_t *creds;
-	int res = 0;
+	int res = 1;
 	FILE *in;
 	enum {
 		OP_NONE,
