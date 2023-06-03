@@ -747,6 +747,74 @@ chunk_t chunk_to_base32(chunk_t chunk, char *buf)
 /**
  * Described in header.
  */
+chunk_t chunk_to_dec(chunk_t chunk, char *buf)
+{
+	int len, i, i_buf, i_bin = 0;
+	uint16_t *bin, quotient, remainder;
+
+	bin = (uint16_t*)malloc(chunk.len * sizeof(uint16_t));
+	for (i = 0; i < chunk.len; i++)
+	{
+		bin[i] = chunk.ptr[i];
+	}
+
+	len = (int)(2.41 * (double)chunk.len) + 1;
+	if (!buf)
+	{
+		buf = malloc(len + 1);
+	}
+	i_buf = len;
+	buf[i_buf] = '\0';
+
+	while (i_bin < chunk.len)
+	{
+		remainder = 0;
+
+		for (i = i_bin; i < chunk.len; i++)
+		{
+			bin[i] += (remainder << 8);
+			if (bin[i] < 10)
+			{
+				remainder = bin[i];
+				bin[i] = 0;
+				if (i == i_bin)
+				{
+					i_bin++;
+				}
+			}
+			else
+			{
+				quotient  = bin[i] / 10;
+				remainder = bin[i] - 10 * quotient;
+				bin[i] = quotient;
+			}
+		}
+
+		if (i_buf > 0)
+		{
+			buf[--i_buf] = 0x30 + remainder;
+		}
+	}
+
+	free(bin);
+
+	/* align decimal number to the start of the string */
+	if (i_buf > 0)
+	{
+		len -= i_buf;
+
+		for (i = 0; i <= len; i++)
+		{
+			buf[i] = buf[i + i_buf];
+		}
+	}
+
+	return chunk_create(buf, len);
+}
+
+/**
+ * Described in header.
+ */
 int chunk_compare(chunk_t a, chunk_t b)
 {
 	int compare_len = a.len - b.len;
