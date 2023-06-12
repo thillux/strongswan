@@ -109,30 +109,6 @@ struct private_x509_ocsp_response_t {
 	refcount_t ref;
 };
 
-/**
- * single response contained in OCSP response
- */
-typedef struct {
-	/** hash algorithm OID to for the two hashes */
-	int hashAlgorithm;
-	/** hash of issuer DN */
-	chunk_t issuerNameHash;
-	/** issuerKeyID */
-	chunk_t issuerKeyHash;
-	/** serial number of certificate */
-	chunk_t serialNumber;
-	/** OCSP certificate status */
-	cert_validation_t status;
-	/** time of revocation, if revoked */
-	time_t revocationTime;
-	/** revocation reason, if revoked */
-	crl_reason_t revocationReason;
-	/** creation of associated CRL */
-	time_t thisUpdate;
-	/** creation of next CRL */
-	time_t nextUpdate;
-} single_response_t;
-
 /* our OCSP response version implementation */
 #define OCSP_BASIC_RESPONSE_VERSION 1
 
@@ -142,7 +118,7 @@ METHOD(ocsp_response_t, get_status, cert_validation_t,
 	time_t *this_update, time_t *next_update)
 {
 	enumerator_t *enumerator;
-	single_response_t *response;
+	ocsp_single_response_t *response;
 	cert_validation_t status = VALIDATION_FAILED;
 	certificate_t *issuercert = &issuer->interface;
 
@@ -232,7 +208,7 @@ METHOD(ocsp_response_t, create_cert_enumerator, enumerator_t*,
 CALLBACK(filter, bool,
 	void *data, enumerator_t *orig, va_list args)
 {
-	single_response_t *response;
+	ocsp_single_response_t *response;
 	cert_validation_t *status;
 	crl_reason_t *revocationReason;
 	chunk_t *serialNumber;
@@ -275,6 +251,15 @@ METHOD(ocsp_response_t, get_nonce, chunk_t,
 	private_x509_ocsp_response_t *this)
 {
 	return this->nonce;
+}
+
+/**
+ * Build the OCSPResponse data
+ *
+ */
+static chunk_t build_OCSPResponse(private_x509_ocsp_response_t *this)
+{
+	return chunk_empty;
 }
 
 /**
@@ -338,9 +323,9 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 	int objectID;
 	bool success = FALSE;
 
-	single_response_t *response;
+	ocsp_single_response_t *response;
 
-	response = malloc_thing(single_response_t);
+	response = malloc_thing(ocsp_single_response_t);
 	response->hashAlgorithm = OID_UNKNOWN;
 	response->issuerNameHash = chunk_empty;
 	response->issuerKeyHash = chunk_empty;
@@ -755,6 +740,7 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 
+
 	key = issuer->get_public_key(issuer);
 	if (!key)
 	{
@@ -855,9 +841,9 @@ METHOD(certificate_t, destroy, void,
 }
 
 /**
- * load an OCSP response
+ * create an empty but initialized OCSP response
  */
-static x509_ocsp_response_t *load(chunk_t blob)
+static private_x509_ocsp_response_t *create_empty()
 {
 	private_x509_ocsp_response_t *this;
 
@@ -885,12 +871,57 @@ static x509_ocsp_response_t *load(chunk_t blob)
 			},
 		},
 		.ref = 1,
-		.encoding = chunk_clone(blob),
 		.producedAt = UNDEFINED_TIME,
 		.usableUntil = UNDEFINED_TIME,
 		.responses = linked_list_create(),
 		.certs = linked_list_create(),
 	);
+
+	return this;
+}
+
+/**
+ * See header.
+ */
+x509_ocsp_response_t *x509_ocsp_response_gen(certificate_type_t type, va_list args)
+{
+	private_x509_ocsp_response_t *this;
+
+	this = create_empty();
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_END:
+				break;
+			default:
+				goto error;
+		}
+		break;
+	}
+
+	if (TRUE)
+	{
+		this->encoding = build_OCSPResponse(this);
+
+		return &this->public;
+	}
+
+error:
+	destroy(this);
+	return NULL;
+}
+
+/**
+ * load an OCSP response
+ */
+static x509_ocsp_response_t *load(chunk_t blob)
+{
+	private_x509_ocsp_response_t *this;
+
+	this = create_empty();
+	this->encoding =  chunk_clone(blob);
 
 	if (!parse_OCSPResponse(this))
 	{

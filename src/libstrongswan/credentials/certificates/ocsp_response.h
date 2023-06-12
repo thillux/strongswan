@@ -27,6 +27,7 @@
 #include <credentials/certificates/crl.h>
 
 typedef struct ocsp_response_t ocsp_response_t;
+typedef struct ocsp_single_response_t ocsp_single_response_t;
 typedef enum ocsp_status_t ocsp_status_t;
 
 /**
@@ -45,6 +46,57 @@ enum ocsp_status_t {
  * enum names for ocsp_status_t
  */
 extern enum_name_t *ocsp_status_names;
+
+/**
+ * Single response contained in OCSP response
+ */
+struct ocsp_single_response_t {
+
+	/**
+	 *  Hash algorithm OID to for the two hashes
+	 */
+	int hashAlgorithm;
+
+	/**
+	 *  hash of issuer DN
+	 */
+	chunk_t issuerNameHash;
+
+	/**
+	 * issuerKeyID
+	 */
+	chunk_t issuerKeyHash;
+
+	/**
+	 * Serial number of certificate
+	 */
+	chunk_t serialNumber;
+
+	/**
+	 * OCSP certificate status
+	 */
+	cert_validation_t status;
+
+	/**
+	 * Time of revocation, if revoked
+	 */
+	time_t revocationTime;
+
+	/**
+	 * Revocation reason, if revoked
+	 */
+	crl_reason_t revocationReason;
+
+	/**
+	 * Creation of the OCSP single response
+	 */
+	time_t thisUpdate;
+
+	/**
+	 * Creation of next OCSP single response
+	 */
+	time_t nextUpdate;
+};
 
 /**
  * OCSP response message.

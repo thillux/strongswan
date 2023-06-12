@@ -105,6 +105,8 @@ static int ocsp()
 	int res = 0;
 	FILE *in;
 	enumerator_t *enumerator;
+	bool trusted = TRUE;
+
 
 	enum {
 		OP_SHOW,
@@ -254,7 +256,6 @@ static int ocsp()
 		public_key_t *public;
 		hasher_t *hasher;
 		enumerator_t *certs;
-		bool trusted = TRUE;
 
 		requestor = ocsp_req->get_subject(ocsp_req);
 		if (requestor)
@@ -306,7 +307,7 @@ static int ocsp()
 		hasher->destroy(hasher);
 	}
 
-	if (op == OP_RESPOND)
+	if (op == OP_RESPOND && trusted)
 	{
 		ocsp_responder = lib->get(lib, "ocsp-responder");
 		if (!ocsp_responder)
