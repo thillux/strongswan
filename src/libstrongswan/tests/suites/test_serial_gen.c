@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) 2022-2023 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -18,6 +18,7 @@
 
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
+#include <credentials/certificates/ocsp_request.h>
 #include <credentials/certificates/ocsp_response.h>
 #include <credentials/certificates/ac.h>
 
@@ -177,6 +178,21 @@ static certificate_t* create_ocsp_request(certificate_t *cert)
 						BUILD_CERT, cert,
 						BUILD_END);
 
+	ck_assert(ocsp_req);
+
+	return ocsp_req;
+}
+
+/**
+ * Parse an ASN.1 encoded OCSP request
+ */
+static certificate_t* parse_ocsp_request(chunk_t encoding)
+{
+	certificate_t *ocsp_req;
+
+	ocsp_req = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
+						BUILD_BLOB_ASN1_DER, encoding,
+						BUILD_END);
 	ck_assert(ocsp_req);
 
 	return ocsp_req;
@@ -350,6 +366,7 @@ START_TEST(test_gen_serial_numbers)
 {
 	chunk_t encoding, serial, serial_asn1;
 	certificate_t *cert, *crl, *ocsp_req, *acert, *acert1;
+	ocsp_request_t *ocsp_request;
 	enumerator_t *enumerator;
 	crl_t *x509_crl;
 	x509_t *x509;
@@ -502,6 +519,18 @@ START_TEST(test_gen_serial_numbers)
 	pos = encoding.ptr + 68;
 	serial_asn1 = chunk_create(pos, 1 + *pos);
 	ck_assert_chunk_eq(serial_asn1, serial_numbers[_i].serial_asn1);
+	ocsp_req->destroy(ocsp_req);
+
+	/* parse ocsp request */
+	ocsp_req = parse_ocsp_request(encoding);
+	ocsp_request = (ocsp_request_t*)ocsp_req;
+
+	/* test ocsp request */
+	enumerator = ocsp_request->create_request_enumerator(ocsp_request);
+	ck_assert(enumerator->enumerate(enumerator, NULL, NULL, NULL, &serial));
+	ck_assert_chunk_eq(serial, serial_numbers[_i].serial);
+	enumerator->destroy(enumerator);
+
 	chunk_free(&encoding);
 
 	/* test ocsp response */
