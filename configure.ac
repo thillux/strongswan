@@ -143,6 +143,7 @@ ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
 ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
 ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
 ARG_DISBL_SET([drbg],           [disable the NIST Deterministic Random Bit Generator plugin.])
+ARG_ENABL_SET([esdm],           [enable the ESDM random generator plugin.])
 ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
 ARG_DISBL_SET([gcm],            [disable the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
@@ -1186,6 +1187,12 @@ if test x$wolfssl = xtrue; then
 	AC_SUBST(wolfssl_LIBS)
 fi
 
+if test x$esdm = xtrue; then
+	PKG_CHECK_MODULES(esdm_rpc_client, [esdm_rpc_client])
+	AC_SUBST(esdm_rpc_client_CFLAGS)
+	AC_SUBST(esdm_rpc_client_LIBS)
+fi
+
 if test x$gcrypt = xtrue; then
 	AC_CHECK_LIB([gcrypt],[gcry_control],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
 	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
@@ -1539,6 +1546,7 @@ ADD_PLUGIN([sha1],                 [s charon pki scripts manager medsrv attest n
 ADD_PLUGIN([md4],                  [s charon pki nm cmd])
 ADD_PLUGIN([md5],                  [s charon pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([mgf1],                 [s charon pki scripts medsrv attest nm cmd aikgen])
+ADD_PLUGIN([esdm],                 [s charon pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([rdrand],               [s charon pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([random],               [s charon pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
@@ -1708,6 +1716,7 @@ AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_CURVE25519, test x$curve25519 = xtrue)
 AM_CONDITIONAL(USE_RDRAND, test x$rdrand = xtrue)
+AM_CONDITIONAL(USE_ESDM, test x$esdm = xtrue)
 AM_CONDITIONAL(USE_AESNI, test x$aesni = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_NONCE, test x$nonce = xtrue)
@@ -1985,6 +1994,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/gmp/Makefile
 	src/libstrongswan/plugins/curve25519/Makefile
 	src/libstrongswan/plugins/rdrand/Makefile
+	src/libstrongswan/plugins/esdm/Makefile
 	src/libstrongswan/plugins/aesni/Makefile
 	src/libstrongswan/plugins/random/Makefile
 	src/libstrongswan/plugins/nonce/Makefile

@@ -360,6 +360,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_ESDM
+  SUBDIRS += plugins/esdm
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/esdm/libstrongswan-esdm.la
+endif
+endif
+
 if USE_RDRAND
   SUBDIRS += plugins/rdrand
 if MONOLITHIC
