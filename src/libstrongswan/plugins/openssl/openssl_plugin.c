@@ -778,6 +778,10 @@ plugin_t *openssl_plugin_create()
 {
 	private_openssl_plugin_t *this;
 	int fips_mode;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	const char *custom_provider;
+	const char *provider_search_path;
+#endif
 
 	fips_mode = lib->settings->get_int(lib->settings,
 							"%s.plugins.openssl.fips_mode", FIPS_MODE, lib->ns);
@@ -839,14 +843,58 @@ plugin_t *openssl_plugin_create()
 		/* explicitly load the base provider containing encoding functions */
 		OSSL_PROVIDER_load(NULL, "base");
 	}
-	else if (lib->settings->get_bool(lib->settings, "%s.plugins.openssl.load_legacy",
+
+	provider_search_path = lib->settings->get_str(
+			lib->settings, "%s.plugins.openssl.provider_search_path",
+			NULL, lib->ns);
+	if (provider_search_path)
+	{
+		if (OSSL_PROVIDER_set_default_search_path(NULL, provider_search_path) != 1)
+		{
+			DBG1(DBG_LIB, "unable to set OpenSSL provider search path");
+			destroy(this);
+			return NULL;
+		}
+	}
+
+	custom_provider = lib->settings->get_str(
+			lib->settings, "%s.plugins.openssl.custom_provider",
+			NULL, lib->ns);
+	if (custom_provider)
+	{
+		/* load the custom provider in order to use e.g. smartcards or custom RNGs */
+		if (!OSSL_PROVIDER_load(NULL, custom_provider))
+		{
+			DBG1(DBG_LIB, "unable to load OpenSSL custom provider");
+			destroy(this);
+			return NULL;
+		}
+	}
+
+	if (lib->settings->get_bool(lib->settings, "%s.plugins.openssl.load_legacy",
 									 TRUE, lib->ns))
 	{
 		/* load the legacy provider for algorithms like MD4, DES, BF etc. */
-		OSSL_PROVIDER_load(NULL, "legacy");
-		/* explicitly load the default provider, as mentioned by crypto(7) */
-		OSSL_PROVIDER_load(NULL, "default");
+		if (!OSSL_PROVIDER_load(NULL, "legacy"))
+		{
+			DBG1(DBG_LIB, "unable to load OpenSSL legacy provider");
+			destroy(this);
+			return NULL;
+		}
 	}
+
+	if (lib->settings->get_bool(lib->settings, "%s.plugins.openssl.load_default",
+									 TRUE, lib->ns))
+	{
+		/* explicitly load the default provider, as mentioned by crypto(7) */
+		if (!OSSL_PROVIDER_load(NULL, "default"))
+		{
+			DBG1(DBG_LIB, "unable to load OpenSSL default provider");
+			destroy(this);
+			return NULL;
+		}
+	}
+
 	ossl_provider_names_t data = {};
 	OSSL_PROVIDER_do_all(NULL, concat_ossl_providers, &data);
 	dbg(DBG_LIB, strpfx(lib->ns, "charon") ? 1 : 2,

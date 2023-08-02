@@ -16,3 +16,16 @@ charon.plugins.openssl.load_legacy = yes
 	Blowfish (the first two are required for EAP-MSCHAPv2). If disabled, the
 	default provider is loaded, or those configured in the OpenSSL config (e.g.
 	the fips provider).
+
+charon.plugins.openssl.load_default = yes
+	Load the default provider in OpenSSL 3+. Use this if another provider
+	is used, which only provides a subset (e.g. random number generation) of
+	the needed functionality. Also use this, if the legacy provider should be used.
+
+charon.plugins.openssl.provider_search_path = ""
+	Search path for non-builtin providers in OpenSSL 3+, leave unset in order to use
+	the OpenSSL default search path.
+
+charon.plugins.openssl.custom_provider = ""
+	Name of custom provider in OpenSSL 3+, leave unset in order to no load any
+	additional provider.
